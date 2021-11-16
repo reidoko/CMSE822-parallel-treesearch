@@ -1,4 +1,10 @@
-# Parallelized phylogenetic tree search
+# Setup/Requirements
+
+PAML is required to 
+
+`conda create --name ppts --file requirements.txt`
+
+# Project Proposal: Parallelized phylogenetic tree search
 
 ## Abstract
 In the angiosperms (flowering plants) there are monocots, eudicots, and magnoliids. There is an interesting pattern in monocots, which is that in many of their genomes, their G+C content is bimodally distributed, or just generally elevated, unlike in the other flowering plants. This indicates some kind of shift in the rate of substitution biased towards G and C. To test this hypothesis, and potentially locate that shift, I would have to use a nonhomogeneous substitution model which can vary across lineages, which is not common. Thankfully, Phylogenetic Analysis by Maximum Likelihood (PAML) [1] is a set of programs which implement wonderfully rich models for estimating phylogenetic trees, branch lengths, substitution rates, etc. Baseml is one such program in PAML that supports nonhomogeneous substitution models. For that, however, tree topology search is disabled. I’ve already written a wrapper for baseml for basic tree topology search, but it’s single-threaded. I want to parallelize the search this wrapper is doing.
