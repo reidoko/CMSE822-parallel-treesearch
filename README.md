@@ -26,8 +26,9 @@ For comparison metrics:
  better
  - Parameter error: Vector of parameters and take the euclidean distance between the true and estimated
  parameters.
- - Likelihood:calculated by PAML, greater is better
+ - Likelihood: Calculated by PAML, greater is better
 
 ## References
 [1] Z. Yang, “PAML 4: Phylogenetic Analysis by Maximum Likelihood,” Molecular Biology and Evolution, vol. 24, no. 8, pp. 1586–1591, Aug. 2007, doi: 10.1093/molbev/msm088.
+
 [2] J. Dutheil and B. Boussau, “Non-homogeneous models of sequence evolution in the Bio++ suite of libraries and programs,” BMC Evolutionary Biology, vol. 8, no. 1, p. 255, Sep. 2008, doi: 10.1186/1471-2148-8-255.
