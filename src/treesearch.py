@@ -8,7 +8,7 @@ import random
 import ete3
 import subprocess
 
-from utils import  baseml
+from utils import baseml
 
 def fill_baseml_template(ctl_template, replacements):
     result = ctl_template
@@ -46,12 +46,13 @@ def nj_tree(alignment, unrooted=True):
     return result
 
 def best_result(results):
-    best_result = None
+    best_result = {'log likelihood' : float('-inf')}
     best_log_likelihood = float('-inf')
     for result in results:
-        if result['log likelihood'] > best_log_likelihood:
-            best_log_likelihood = result['log likelihood']
-            best_result = result
+        if result:
+            if result['log likelihood'] > best_log_likelihood:
+                best_log_likelihood = result['log likelihood']
+                best_result = result
     return best_result
 
 def get_shift_partitions(tree, k=1):
@@ -120,7 +121,7 @@ def run_single_shift_baseml(tree, output_path, ctl_template, cleanup="delete"):
     for ix, model_tree in enumerate(model_assignments, start=1):
         sub_path = Path(f"{output_path}/single_shift_{ix}")
         sub_path.mkdir(exist_ok=True)
-        result = run_baseml(tree, sub_path, ctl_template)
+        result = run_baseml(tree, sub_path, ctl_template, writetree = lambda x : model_tree)
         if best_likelihood < result["log likelihood"]:
             best_info = result
             best_info["Path"] = sub_path
@@ -165,7 +166,7 @@ def serial_single_shift_search(args):
 
     print(f"{str(stepnum).zfill(ndigits)}:\t{best_likelihood}")
     iter_num = 1
-    while iter_num < args.max_iter:
+    while iter_num <= args.max_iter:
         # strategy is to visit the neighbors of the highest likelihood tree visited
         # to try different strategies probably change this
         prev_best_tree = best_tree

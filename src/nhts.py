@@ -4,7 +4,7 @@ import subprocess
 import logging
 
 from pathlib import Path
-from treesearch import serial_single_shift_search
+import treesearch as ts 
 
 def valid_file(path_str):
     p = Path(path_str)
@@ -33,7 +33,7 @@ def is_positive(x):
         raise argparse.ArgumentTypeError(f"Number of processes must be at least 1 (got {x})")
     return ivalue
 
-def parse_args():
+def make_parser():
     parser = argparse.ArgumentParser(
         description="Wrapper for tree search (serial version)"
     )
@@ -43,27 +43,43 @@ def parse_args():
     parser.add_argument("-o", "--output", type=valid_output, help="Directory to output results to", required=True)
     parser.add_argument("-z", "--seed", type=int, help="Seed PRNG")
     parser.add_argument("-S", "--start", type=valid_start_strategy, help="Starting tre strategy: 'random', 'nj', or 'upgma'", default='nj') # for now...
-    parser.add_argument("-P", "--MPI", type=is_positive, help="number of MPI processes. If set to 1, program executes serially", default=1)
     parser.add_argument("-M", "--max_iter", type=int, help="Maximum number of iterations", default=2)
+    parser.add_argument("-X", "--mpi_method", type=str, help="Pick parallelization strategy", default="1")
+    parser.add_argument("-l", "--logging", choices=["DEBUG", "INFO", "WARNING", "ERROR","CRITICAL"], default="INFO", help="Set the logging level")
+    return parser
+
+def main():
+    parser = make_parser()
+    parser.add_argument("-P", "--MPI", type=is_positive, help="number of MPI processes. If set to 1, program executes serially", default=1)
     try:
         args = parser.parse_args()
     except Exception as e:
         print(e)
         parser.print_help()
-        exit(0)
-    return args
-
-def main():
-    logging.basicConfig(level=logging.DEBUG)
-    args = parse_args()
+        exit(1)
+    logging.basicConfig(level=args.logging)
     if args.MPI > 1:
-        logging.debug(f"Running MPI with {args.MPI} processes")
+        logging.info(f"Running MPI with {args.MPI} processes")
         # kinda janky, should probably not even do that
-        # subprocess.run(["mpiexec", "-n", str(args.MPI), "python", "treesearch-mpi.py"])
-        raise NotImplementedError("MPI not yet implemented")
+        proc_args = [
+            "mpiexec", "-n", str(args.MPI), 
+            "python", "nhts-mpi.py", 
+            "-t", str(args.template.absolute()),
+            "-s", str(args.seq.absolute()),
+            "-o", str(args.output.absolute()),
+            "-M", str(args.max_iter),
+            "-X", str(args.mpi_method),
+            "-l", str(args.logging)
+        ]
+        if args.seed:
+            proc_args.extend(["-z", str(args.seed)])
+        if args.start:
+            proc_args.extend(["-S", str(args.start)])
+        subprocess.Popen(proc_args, cwd=Path(__file__).parent).wait()
+        # raise NotImplementedError("MPI not yet implemented")
     else:
-        logging.debug(f"Running serial algorithm")
-        result = serial_single_shift_search(args)
+        logging.info(f"Running serial algorithm")
+        result = ts.serial_single_shift_search(args)
 
 if __name__ == "__main__":
     main()

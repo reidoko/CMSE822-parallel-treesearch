@@ -1,29 +1,46 @@
 #!/usr/bin/env python3
 import argparse
 import treesearch as ts
+import logging
 
 from pathlib import Path
 from Bio import AlignIO
 from mpi4py import MPI
 from nhts import make_parser
-
+from numpy import array_split
 def crude_partition(data, n):
     # i don't really like this, but it works fine enough
-    return [data[i:i+n] for i in range(0, len(data),n)]
+    # return [data[i:i+n] for i in range(0, len(data),n)]
+    return array_split(data, n)
 
 def main():
+    parser = make_parser()
+    args = parser.parse_args()
+    logging.basicConfig(
+        level=args.logging,
+        format="%(asctime)s %(levelname)-4s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    strategy_map = {
+        '1' : strategy_1,
+        '2' : strategy_2
+    }
+    strategy_map[args.mpi_method](args)
+
+def strategy_1(args):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     comm_size = comm.Get_size()
+    if rank == 0:
+        logging.info(f"Using strategy 1 (arg: {args.mpi_method})")
     
-    parser = make_parser()
-    args = parser.parse_args()
-
     with open(args.template, 'r') as fi:
         ctl_template = "".join(fi.read())
     ctl_template = ctl_template.replace("#SEQFILE", str(args.seq.absolute()))
     
     if rank == 0: # director
+        ndigits = len(str(args.max_iter))
+        logging.debug(f"{rank}: Choosing starting tree and constructing NNI neighborhood")
         # Get initial trees
         alignment = AlignIO.read(args.seq, format="phylip-relaxed")
         if args.start == 'nj':
@@ -52,8 +69,9 @@ def main():
         for iter_num in range(args.max_iter):
             partition = crude_partition(neighbors, comm_size)
             partition = [partition[-1]] + partition[:-1]
-            next_trees = comm.scatter(partition, root=0)
-        
+            logging.debug(f"{rank}: Sending neighborhood to processes")
+            next_trees = comm.scatter(partition, root=0) 
+            logging.debug(f"{rank}: Finished sending, Received neighborhood of size {len(next_trees)}")
             for tree in next_trees:
                 opath = Path(f"{args.output}/r{rank}_step_{stepnum}")
                 result = ts.run_single_shift_baseml(tree, opath, ctl_template)
@@ -61,7 +79,7 @@ def main():
                     l_best_likelihood = result["log likelihood"]
                     l_best_info = result
                     l_best_tree = result["tree"]
-            stepnum += 1
+                stepnum += 1
             # gather the best trees
             local_results = comm.gather(l_best_info, root=0)
             g_best_info = max([g_best_info] + local_results, key=lambda x : x["log likelihood"])
@@ -69,7 +87,8 @@ def main():
             best_tree = g_best_info["tree"]
             if best_tree == prev_tree:
                 # send out an empty list and then stop working
-                next_trees = comm.scatter([False] * comm_size, root=0)
+                print(f"{str(iter_num).zfill(ndigits)}:  Did not find a better tree, stopping...")
+                next_trees = comm.scatter([None] * comm_size, root=0)
                 break
             else:
                 prev_tree = best_tree
@@ -83,7 +102,7 @@ def main():
                             break
                     if dont_skip:
                         neighbors.append(t)
-            print(f"{stepnum}:  {g_best_likelihood}")
+            print(f"{str(iter_num).zfill(ndigits)}:  {g_best_likelihood}", flush=True)
         
         print(f"Best tree topology:", g_best_info["tree"].write(format=9))
         print("see results in ", g_best_info["Path"])
@@ -97,7 +116,8 @@ def main():
         
         for iter_num in range(args.max_iter):
             next_trees = comm.scatter(None, root=0)
-            if not next_trees:
+            logging.debug(f"{rank}: Received neighborhood of size {len(next_trees)}")
+            if next_trees is None:
                 # kind of crude - what if one process doesn't have neighboring trees for one iteration ? 
                 # it just stops doing work forever?
                 break
@@ -110,6 +130,15 @@ def main():
                     l_best_tree = result["tree"]
                 stepnum += 1
             comm.gather(l_best_info, root=0)
+
+def strategy_2(args):
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+    if rank == 0:
+        logging.info(f"Using strategy 2 (arg: {args.mpi_method})")
+        logging.error("Not yet implemented")
+
 
 if __name__ == "__main__":
     main()
