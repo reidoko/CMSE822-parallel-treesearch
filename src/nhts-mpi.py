@@ -28,6 +28,10 @@ def main():
     strategy_map[args.mpi_method](args)
 
 def strategy_1(args):
+    """
+    This strategy just distributes the work of each neighborhood 
+    across all the processes. Rank 0 is in charge of doing that.
+    """
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     comm_size = comm.Get_size()
@@ -96,6 +100,7 @@ def strategy_1(args):
                 neighbors = []
                 for t in unfiltered_neighbors:
                     dont_skip = True
+                    # this is terrible, really
                     for v in visited_trees:
                         if t.compare(v, unrooted=True)['norm_rf'] == 0:
                             dont_skip = False
@@ -132,6 +137,15 @@ def strategy_1(args):
             comm.gather(l_best_info, root=0)
 
 def strategy_2(args):
+    """
+    For this strategy, each thread does the same thing
+    allgather visited trees
+    allreduce max of likelihood 
+
+    visited trees kept track in a set
+    trees are encoded by a bipartition of leaves
+
+    """
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     comm_size = comm.Get_size()
