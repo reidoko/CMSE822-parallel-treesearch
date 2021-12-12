@@ -1,0 +1,10 @@
+name: nhts-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - biopython>=1.79
+  - mpi4py>=3.1.2
+  - numpy>=1.21.4
+  - python>=3.10.0
+  - ete3>=3.1.2
