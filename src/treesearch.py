@@ -71,6 +71,18 @@ def get_shift_partitions(tree, k=1):
         sps.add(frozenset((p1,p2)))
     return sps
 
+def bipartition_key(node, all_leaves):
+    leaves = {x.name for x in node.get_leaves()}
+    notleaves = all_leaves - leaves
+    bp = frozenset({frozenset(leaves), frozenset(notleaves)})
+    return bp
+
+# kinda cursed but i wanted to be able to use a tree as a key
+def bipartition_representation(tree):
+    all_leaves = {x.name for x in t1.get_leaves()}
+    return frozenset({bipartition_key(x, all_leaves) for x in  t1.traverse()})
+
+bipartition_representation(t1)
 
 def single_shift_assignments(input_tree):
     tree = input_tree.copy()
