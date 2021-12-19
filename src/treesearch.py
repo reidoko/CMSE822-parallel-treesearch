@@ -79,10 +79,8 @@ def bipartition_key(node, all_leaves):
 
 # kinda cursed but i wanted to be able to use a tree as a key
 def bipartition_representation(tree):
-    all_leaves = {x.name for x in t1.get_leaves()}
-    return frozenset({bipartition_key(x, all_leaves) for x in  t1.traverse()})
-
-bipartition_representation(t1)
+    all_leaves = {x.name for x in tree.get_leaves()}
+    return frozenset({bipartition_key(x, all_leaves) for x in  tree.traverse()})
 
 def single_shift_assignments(input_tree):
     tree = input_tree.copy()
